@@ -1317,10 +1317,9 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
 	} else {
 		uint32_t flags=0;
 
-        if ( has_usage_flags(usage, GRALLOC_USAGE_SW_WRITE_OFTEN)
-            || has_usage_flags(usage, GRALLOC_USAGE_SW_READ_OFTEN) )
+        if ( (usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_OFTEN )
         {
-            D("to ask for cachable buffer for CPU access, usage : 0x%x", usage);
+            D("to ask for cachable buffer for CPU read, usage : 0x%x", usage);
             flags = ROCKCHIP_BO_CACHABLE;
         }
 
