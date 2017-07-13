@@ -149,7 +149,10 @@ endif
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM_GPU)), mali-t760)
 MALI_AFBC_GRALLOC := 1
+# rk3288 vop cann't support AFBC.
+ifneq ($(strip $(TARGET_BOARD_PLATFORM)),rk3288)
 USE_AFBC_LAYER = 1
+endif
 LOCAL_CFLAGS += -DMALI_PRODUCT_ID_T76X=1
 endif
 
