@@ -227,7 +227,14 @@ int gralloc_drm_handle_unregister(buffer_handle_t handle)
 	if (!bo)
 		return -EINVAL;
 
-        gralloc_drm_bo_decref(bo);
+    //If handle is modified,then we need update bo->handle.
+    if((unsigned long)bo->handle != (unsigned long)handle)
+    {
+        ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s: update bo->handle=%p ==> handle=%p",__FUNCTION__,bo->handle,handle);
+        bo->handle = (struct gralloc_drm_handle_t *)handle;
+    }
+
+    gralloc_drm_bo_decref(bo);
 
 	return 0;
 }
@@ -365,6 +372,14 @@ int gralloc_drm_free_bo_from_handle(buffer_handle_t handle)
 	bo = validate_handle(handle, NULL);
 	if (!bo)
 		return -EINVAL;
+
+    //If handle is modified,then we need update bo->handle.
+    if((unsigned long)bo->handle != (unsigned long)handle)
+    {
+        ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s: update bo->handle=%p ==> handle=%p",__FUNCTION__,bo->handle,handle);
+        bo->handle = (struct gralloc_drm_handle_t *)handle;
+    }
+
 	gralloc_drm_bo_decref(bo);
 
 	return 0;
