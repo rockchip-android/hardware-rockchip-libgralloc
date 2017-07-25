@@ -125,6 +125,10 @@ struct gralloc_drm_handle_t {
 
 	int name;   /* the name of the bo */
 	int stride; /* the stride in bytes */
+	uint32_t phy_addr;
+	uint32_t reserve0;
+	uint32_t reserve1;
+	uint32_t reserve2;
 
 	struct gralloc_drm_bo_t *data; /* pointer to struct gralloc_drm_bo_t */
 

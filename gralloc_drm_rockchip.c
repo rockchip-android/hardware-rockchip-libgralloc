@@ -1,6 +1,5 @@
 #define LOG_TAG "GRALLOC-ROCKCHIP"
 
-#define LOG_TAG "mali_so"
 #define ENABLE_DEBUG_LOG
 #include <log/custom_log.h>
 
@@ -40,22 +39,26 @@ struct dma_buf_sync {
 #define DMA_BUF_BASE            'b'
 #define DMA_BUF_IOCTL_SYNC      _IOW(DMA_BUF_BASE, 0, struct dma_buf_sync)
 
-
 /* memory type definitions. */
 enum drm_rockchip_gem_mem_type {
 	/* Physically Continuous memory and used as default. */
-	ROCKCHIP_BO_CONTIG	= 0 << 0,
-	/* Physically Non-Continuous memory. */
-	ROCKCHIP_BO_NONCONTIG	= 1 << 0,
-	/* non-cachable mapping and used as default. */
-	ROCKCHIP_BO_NONCACHABLE	= 0 << 1,
+	ROCKCHIP_BO_CONTIG	= 1 << 0,
 	/* cachable mapping. */
 	ROCKCHIP_BO_CACHABLE	= 1 << 1,
 	/* write-combine mapping. */
 	ROCKCHIP_BO_WC		= 1 << 2,
-	ROCKCHIP_BO_MASK	= ROCKCHIP_BO_NONCONTIG | ROCKCHIP_BO_CACHABLE |
-					ROCKCHIP_BO_WC
+	ROCKCHIP_BO_MASK	= ROCKCHIP_BO_CONTIG | ROCKCHIP_BO_CACHABLE |
+				ROCKCHIP_BO_WC
 };
+
+struct drm_rockchip_gem_phys {
+	uint32_t handle;
+	uint32_t phy_addr;
+};
+
+#define DRM_ROCKCHIP_GEM_GET_PHYS	0x04
+#define DRM_IOCTL_ROCKCHIP_GEM_GET_PHYS		DRM_IOWR(DRM_COMMAND_BASE + \
+		DRM_ROCKCHIP_GEM_GET_PHYS, struct drm_rockchip_gem_phys)
 
 struct rockchip_info {
 	struct gralloc_drm_drv_t base;
@@ -979,8 +982,11 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
 	uint32_t width, height, vrefresh;
 #endif
 	uint32_t flags = 0;
+	struct drm_rockchip_gem_phys phys_arg;
 
-        AINF("enter, w : %d, h : %d, format : 0x%x, usage : 0x%x.", w, h, format, usage);
+        ALOGD("enter, w : %d, h : %d, format : 0x%x, usage : 0x%x.", w, h, format, usage);
+
+	phys_arg.phy_addr = 0;
 
         if(format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED  )
         {
@@ -1302,16 +1308,18 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
 	}
 #endif
 
-	if ( (usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_OFTEN )
+	if ( (usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_OFTEN
+		|| format == HAL_PIXEL_FORMAT_YCrCb_NV12_10)
 	{
 		D("to ask for cachable buffer for CPU read, usage : 0x%x", usage);
+		//set cache flag
 		flags = ROCKCHIP_BO_CACHABLE;
 	}
 
-	if(format == HAL_PIXEL_FORMAT_YCrCb_NV12_10)
+	if(usage & GRALLOC_USAGE_TO_USE_PHY_CONT)
 	{
-		//set cache flag
-		flags = ROCKCHIP_BO_CACHABLE;
+		flags |= ROCKCHIP_BO_CONTIG;
+		ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "try to use Physically Continuous memory\n");
 	}
 
 	if (handle->prime_fd >= 0) {
@@ -1344,6 +1352,16 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
 			drmIoctl(info->fd, DRM_IOCTL_GEM_CLOSE, &args);
 			return NULL;
 		}
+#if 0
+		if(usage & GRALLOC_USAGE_TO_USE_PHY_CONT)
+		{
+			phys_arg.handle = gem_handle;
+			ret = drmIoctl(info->fd, DRM_IOCTL_ROCKCHIP_GEM_GET_PHYS, &phys_arg);
+			if (ret)
+				ALOGE("failed to get phy address: %s\n", strerror(errno));
+			ALOGD_IF(RK_DRM_GRALLOC_DEBUG,"get phys 0x%x\n", phys_arg.phy_addr);
+		}
+#endif
 	} else {
 		buf->bo = rockchip_bo_create(info->rockchip, size, flags);
 		if (!buf->bo) {
@@ -1375,6 +1393,15 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
 		}
 
 		buf->base.fb_handle = gem_handle;
+
+		if(usage & GRALLOC_USAGE_TO_USE_PHY_CONT)
+		{
+			phys_arg.handle = gem_handle;
+			ret = drmIoctl(info->fd, DRM_IOCTL_ROCKCHIP_GEM_GET_PHYS, &phys_arg);
+			if (ret)
+				ALOGE("failed to get phy address: %s\n", strerror(errno));
+			ALOGD_IF(RK_DRM_GRALLOC_DEBUG,"get phys 0x%x\n", phys_arg.phy_addr);
+		}
 	}
 
 #if GRALLOC_INIT_AFBC == 1
@@ -1442,6 +1469,10 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
 			break;
 	}
 
+	if(phys_arg.phy_addr && phys_arg.phy_addr != handle->phy_addr)
+	{
+		handle->phy_addr = phys_arg.phy_addr;
+	}
         handle->stride = byte_stride;//pixel_stride;
         handle->pixel_stride = pixel_stride;
         handle->byte_stride = byte_stride;
@@ -1514,7 +1545,7 @@ static int drm_gem_rockchip_map(struct gralloc_drm_drv_t *drv,
 		return -1;
 	}
 
-	if(buf && buf->bo && buf->bo->flags == ROCKCHIP_BO_CACHABLE)
+	if(buf && buf->bo && (buf->bo->flags & ROCKCHIP_BO_CACHABLE))
 	{
 		sync_args.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
 		ret = ioctl(bo->handle->prime_fd, DMA_BUF_IOCTL_SYNC, &sync_args);
@@ -1534,7 +1565,7 @@ static void drm_gem_rockchip_unmap(struct gralloc_drm_drv_t *drv,
 
 	UNUSED(drv);
 
-	if(buf && buf->bo && buf->bo->flags == ROCKCHIP_BO_CACHABLE)
+	if(buf && buf->bo && (buf->bo->flags & ROCKCHIP_BO_CACHABLE))
 	{
 		sync_args.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
 		ioctl(bo->handle->prime_fd, DMA_BUF_IOCTL_SYNC, &sync_args);

@@ -81,6 +81,17 @@ static int drm_mod_perform(const struct gralloc_module_t *mod, int op, ...)
 			err = 0;
 		}
 		break;
+	case GRALLOC_MODULE_PERFORM_GET_HADNLE_PHY_ADDR:
+		{
+			buffer_handle_t hnd = va_arg(args, buffer_handle_t);
+			uint32_t *phy_addr = va_arg(args, uint32_t *);
+
+			if (phy_addr > NULL)
+				err = gralloc_drm_handle_get_phy_addr(hnd,phy_addr);
+			else
+				err = -EINVAL;
+		}
+	    break;
 	case GRALLOC_MODULE_PERFORM_GET_HADNLE_PRIME_FD:
 		{
 			buffer_handle_t hnd = va_arg(args, buffer_handle_t);
