@@ -47,8 +47,9 @@ enum drm_rockchip_gem_mem_type {
 	ROCKCHIP_BO_CACHABLE	= 1 << 1,
 	/* write-combine mapping. */
 	ROCKCHIP_BO_WC		= 1 << 2,
+	ROCKCHIP_BO_SECURE	= 1 << 3,
 	ROCKCHIP_BO_MASK	= ROCKCHIP_BO_CONTIG | ROCKCHIP_BO_CACHABLE |
-				ROCKCHIP_BO_WC
+				ROCKCHIP_BO_WC | ROCKCHIP_BO_SECURE
 };
 
 struct drm_rockchip_gem_phys {
@@ -1322,6 +1323,12 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
 		ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "try to use Physically Continuous memory\n");
 	}
 
+	if(usage & GRALLOC_USAGE_PROTECTED)
+	{
+		flags |= ROCKCHIP_BO_SECURE;
+		ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "try to use secure memory\n");
+	}
+
 	if (handle->prime_fd >= 0) {
 		ret = drmPrimeFDToHandle(info->fd, handle->prime_fd,
 			&gem_handle);
@@ -1534,15 +1541,24 @@ static int drm_gem_rockchip_map(struct gralloc_drm_drv_t *drv,
 		int enable_write, void **addr)
 {
 	struct rockchip_buffer *buf = (struct rockchip_buffer *)bo;
+	struct gralloc_drm_handle_t *gr_handle = gralloc_drm_handle((buffer_handle_t)bo->handle);
 	struct dma_buf_sync sync_args;
 	int ret = 0;
 
 	UNUSED(drv, x, y, w, h, enable_write);
 
-	*addr = rockchip_bo_map(buf->bo);
-	if (!*addr) {
-		ALOGE("failed to map bo\n");
-		return -1;
+	if (gr_handle->usage & GRALLOC_USAGE_PROTECTED)
+	{
+		*addr = NULL;
+		ALOGE("The secure buffer cann't be map");
+	}
+	else
+	{
+		*addr = rockchip_bo_map(buf->bo);
+		if (!*addr) {
+			ALOGE("failed to map bo\n");
+			ret = -1;
+		}
 	}
 
 	if(buf && buf->bo && (buf->bo->flags & ROCKCHIP_BO_CACHABLE))
@@ -1553,7 +1569,8 @@ static int drm_gem_rockchip_map(struct gralloc_drm_drv_t *drv,
 			ALOGE("%s:DMA_BUF_IOCTL_SYNC failed", __FUNCTION__);
 	}
 
-	return 0;
+	gralloc_drm_unlock_handle((buffer_handle_t)bo->handle);
+	return ret;
 }
 
 static void drm_gem_rockchip_unmap(struct gralloc_drm_drv_t *drv,
