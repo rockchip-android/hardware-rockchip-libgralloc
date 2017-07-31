@@ -210,6 +210,13 @@ int gralloc_drm_handle_register(buffer_handle_t handle, struct gralloc_drm_t *dr
         return -EINVAL;
     }
 
+    //If handle is modified,then we need update bo->handle.
+    if(bo->imported==1 && (unsigned long)bo->handle != (unsigned long)handle)
+    {
+        ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s: update bo->handle=%p ==> handle=%p",__FUNCTION__,bo->handle,handle);
+        bo->handle = (struct gralloc_drm_handle_t *)handle;
+    }
+
     bo->refcount++;
     pthread_mutex_unlock(&bo_mutex);
 
@@ -228,7 +235,7 @@ int gralloc_drm_handle_unregister(buffer_handle_t handle)
 		return -EINVAL;
 
     //If handle is modified,then we need update bo->handle.
-    if((unsigned long)bo->handle != (unsigned long)handle)
+    if(bo->imported==1 && (unsigned long)bo->handle != (unsigned long)handle)
     {
         ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s: update bo->handle=%p ==> handle=%p",__FUNCTION__,bo->handle,handle);
         bo->handle = (struct gralloc_drm_handle_t *)handle;
@@ -374,7 +381,7 @@ int gralloc_drm_free_bo_from_handle(buffer_handle_t handle)
 		return -EINVAL;
 
     //If handle is modified,then we need update bo->handle.
-    if((unsigned long)bo->handle != (unsigned long)handle)
+    if(bo->imported==1 && (unsigned long)bo->handle != (unsigned long)handle)
     {
         ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s: update bo->handle=%p ==> handle=%p",__FUNCTION__,bo->handle,handle);
         bo->handle = (struct gralloc_drm_handle_t *)handle;
