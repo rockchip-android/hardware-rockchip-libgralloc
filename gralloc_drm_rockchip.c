@@ -1566,7 +1566,7 @@ static int drm_gem_rockchip_map(struct gralloc_drm_drv_t *drv,
 		sync_args.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
 		ret = ioctl(bo->handle->prime_fd, DMA_BUF_IOCTL_SYNC, &sync_args);
 		if (ret != 0)
-			ALOGE("%s:DMA_BUF_IOCTL_SYNC failed", __FUNCTION__);
+			ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s:DMA_BUF_IOCTL_SYNC start failed", __FUNCTION__);
 	}
 
 	gralloc_drm_unlock_handle((buffer_handle_t)bo->handle);
@@ -1587,7 +1587,7 @@ static void drm_gem_rockchip_unmap(struct gralloc_drm_drv_t *drv,
 		sync_args.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
 		ioctl(bo->handle->prime_fd, DMA_BUF_IOCTL_SYNC, &sync_args);
 		if (ret != 0)
-			ALOGE("%s:DMA_BUF_IOCTL_SYNC failed", __FUNCTION__);
+			ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s:DMA_BUF_IOCTL_SYNC end failed", __FUNCTION__);
 	}
 }
 
