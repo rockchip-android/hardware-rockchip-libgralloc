@@ -1543,7 +1543,7 @@ static int drm_gem_rockchip_map(struct gralloc_drm_drv_t *drv,
 	struct rockchip_buffer *buf = (struct rockchip_buffer *)bo;
 	struct gralloc_drm_handle_t *gr_handle = gralloc_drm_handle((buffer_handle_t)bo->handle);
 	struct dma_buf_sync sync_args;
-	int ret = 0;
+	int ret = 0, ret2 = 0;
 
 	UNUSED(drv, x, y, w, h, enable_write);
 
@@ -1564,8 +1564,8 @@ static int drm_gem_rockchip_map(struct gralloc_drm_drv_t *drv,
 	if(buf && buf->bo && (buf->bo->flags & ROCKCHIP_BO_CACHABLE))
 	{
 		sync_args.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
-		ret = ioctl(bo->handle->prime_fd, DMA_BUF_IOCTL_SYNC, &sync_args);
-		if (ret != 0)
+		ret2 = ioctl(bo->handle->prime_fd, DMA_BUF_IOCTL_SYNC, &sync_args);
+		if (ret2 != 0)
 			ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s:DMA_BUF_IOCTL_SYNC start failed", __FUNCTION__);
 	}
 
