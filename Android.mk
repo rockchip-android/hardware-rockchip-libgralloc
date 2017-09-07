@@ -81,7 +81,9 @@ else
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := libgralloc_drm
+ifeq (1,$(strip $(shell expr $(PLATFORM_VERSION) \>= 8.0)))
 LOCAL_PROPRIETARY_MODULE := true
+endif
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_SRC_FILES := \
@@ -257,7 +259,9 @@ LOCAL_SHARED_LIBRARIES += \
 LOCAL_CFLAGS +=-DRK_DRM_GRALLOC=1 -DRK_DRM_GRALLOC_DEBUG=0 -DMALI_AFBC_GRALLOC=1
 
 LOCAL_MODULE := gralloc.$(TARGET_BOARD_HARDWARE)
+ifeq (1,$(strip $(shell expr $(PLATFORM_VERSION) \>= 8.0)))
 LOCAL_PROPRIETARY_MODULE := true
+endif
 LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_RELATIVE_PATH := hw
 include $(BUILD_SHARED_LIBRARY)
