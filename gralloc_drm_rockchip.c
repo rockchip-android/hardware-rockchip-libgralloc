@@ -1032,8 +1032,13 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
 	        if(!(usage & GRALLOC_USAGE_EXTERNAL_DISP) &&
 	           MAGIC_USAGE_FOR_AFBC_LAYER != (usage & MAGIC_USAGE_FOR_AFBC_LAYER)) {
 	                internal_format = GRALLOC_ARM_INTFMT_AFBC | GRALLOC_ARM_HAL_FORMAT_INDEXED_RGBA_8888;
+	                property_set("sys.gmali.fbdc_target","1");
 	                AWAR("use_afbc_layer: force to set 'internal_format' to 0x%llx for buffer_for_fb_target_layer.",
 	                internal_format);
+	        }
+	        else
+	        {
+			property_set("sys.gmali.fbdc_target","0");
 	        }
 	    }
 	}
