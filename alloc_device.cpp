@@ -51,6 +51,14 @@
 
 #define GRALLOC_ALIGN( value, base ) (((value) + ((base) - 1)) & ~((base) - 1))
 
+
+#ifdef HAVE_L1_SVP_MODE
+//#include <linux/rockchip_ion.h>
+//#define ION_SECURE_HEAP_ID 5
+//#define ION_HEAP(bit) (1 << (bit))
+#define ION_HEAP_SECURE_MASK (1 << (5))
+#endif
+
 #if GRALLOC_SIMULATE_FAILURES
 #include <cutils/properties.h>
 
@@ -167,24 +175,27 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 		{
 			map_mask = PROT_WRITE;
 		}
-
-		cpu_ptr = mmap(NULL, size, map_mask, MAP_SHARED, shared_fd, 0);
-
-		if (MAP_FAILED == cpu_ptr)
+#if defined(ION_HEAP_SECURE_MASK)
+		if (!(usage & GRALLOC_USAGE_PROTECTED))
+#endif
 		{
-			AERR("ion_map( %d ) failed", m->ion_client);
+			cpu_ptr = mmap(NULL, size, map_mask, MAP_SHARED, shared_fd, 0);
 
-			if (0 != ion_free(m->ion_client, ion_hnd))
+			if (MAP_FAILED == cpu_ptr)
 			{
-				AERR("ion_free( %d ) failed", m->ion_client);
+				AERR("ion_map( %d ) failed", m->ion_client);
+
+				if (0 != ion_free(m->ion_client, ion_hnd))
+				{
+					AERR("ion_free( %d ) failed", m->ion_client);
+				}
+
+				close(shared_fd);
+				return -1;
 			}
 
-			close(shared_fd);
-			return -1;
+			lock_state = private_handle_t::LOCK_STATE_MAPPED;
 		}
-
-		lock_state = private_handle_t::LOCK_STATE_MAPPED;
-
 		private_handle_t *hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_USES_ION, usage, size, cpu_ptr, lock_state);
 
 		if (NULL != hnd)

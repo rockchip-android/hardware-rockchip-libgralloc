@@ -232,17 +232,21 @@ static int gralloc_register_buffer(gralloc_module_t const *module, buffer_handle
 				goto cleanup;
 #endif
 		}
-
-		mappedAddress = (unsigned char *)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, hnd->share_fd, 0);
-
-		if (MAP_FAILED == mappedAddress)
+#ifdef HAVE_L1_SVP_MODE
+		if (!(hnd->usage & GRALLOC_USAGE_PROTECTED))
+#endif
 		{
-			AERR("mmap( share_fd:%d ) failed with %s",  hnd->share_fd, strerror(errno));
-			retval = -errno;
-			goto cleanup;
-		}
+			mappedAddress = (unsigned char *)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, hnd->share_fd, 0);
 
-		hnd->base = mappedAddress + hnd->offset;
+			if (MAP_FAILED == mappedAddress)
+			{
+				AERR("mmap( share_fd:%d ) failed with %s",  hnd->share_fd, strerror(errno));
+				retval = -errno;
+				goto cleanup;
+			}
+		
+			hnd->base = mappedAddress + hnd->offset;
+		}
 		hnd->lockState &= ~(private_handle_t::LOCK_STATE_UNREGISTERED);
 
 		pthread_mutex_unlock(&s_map_lock);

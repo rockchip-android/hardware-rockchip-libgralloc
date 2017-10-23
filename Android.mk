@@ -67,6 +67,10 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),rk3188)
 LOCAL_CFLAGS += -DTARGET_BOARD_PLATFORM_RK3188 -DRK_FB_CFG_DONE_FLAG=1
 endif#rk3188
 
+ifeq ($(BOARD_WIDEVINE_OEMCRYPTO_LEVEL), 1)
+LOCAL_CFLAGS += -DHAVE_L1_SVP_MODE=ON
+endif
+
 LOCAL_SRC_FILES := \
 	gralloc_module.cpp \
 	alloc_device.cpp \
