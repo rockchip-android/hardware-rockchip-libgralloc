@@ -125,6 +125,11 @@ unsigned int planes_for_format(struct gralloc_drm_t *drm, int hal_format);
 int gralloc_drm_bo_lock(struct gralloc_drm_bo_t *bo, int x, int y, int w, int h, int enable_write, void **addr);
 void gralloc_drm_bo_unlock(struct gralloc_drm_bo_t *bo);
 
+#ifdef USE_HWC2
+int gralloc_drm_handle_get_rk_ashmem(buffer_handle_t _handle, struct rk_ashmem_t* rk_ashmem);
+int gralloc_drm_handle_set_rk_ashmem(buffer_handle_t _handle, struct rk_ashmem_t* rk_ashmem);
+#endif
+
 int gralloc_drm_handle_get_phy_addr(buffer_handle_t _handle, uint32_t *phy_addr);
 
 int gralloc_drm_handle_get_prime_fd(buffer_handle_t _handle, int *fd);

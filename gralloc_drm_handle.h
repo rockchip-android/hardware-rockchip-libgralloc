@@ -88,6 +88,9 @@ struct gralloc_drm_handle_t {
 #if MALI_AFBC_GRALLOC == 1
 	int     share_attr_fd;
 #endif
+#ifdef USE_HWC2
+	int ashmem_fd;
+#endif
         mali_dpy_type dpy_type;
 
         uint64_t   internal_format;
@@ -112,6 +115,12 @@ struct gralloc_drm_handle_t {
 	};
 #endif
 
+#ifdef USE_HWC2
+	union {
+		void*	 ashmem_base;
+		uint64_t padding5;
+	};
+#endif
 	mali_gralloc_yuv_info yuv_info;
 #endif
 
@@ -137,11 +146,22 @@ struct gralloc_drm_handle_t {
 	int data_owner; /* owner of data (for validation) */
 };
 #define GRALLOC_DRM_HANDLE_MAGIC 0x12345678
+#ifdef USE_HWC2
+#if MALI_AFBC_GRALLOC == 1
+#define GRALLOC_DRM_HANDLE_NUM_FDS 3
+#else
+#define GRALLOC_DRM_HANDLE_NUM_FDS 2
+#endif
+
+#else
 #if MALI_AFBC_GRALLOC == 1
 #define GRALLOC_DRM_HANDLE_NUM_FDS 2
 #else
 #define GRALLOC_DRM_HANDLE_NUM_FDS 1
 #endif
+
+#endif
+
 #define GRALLOC_DRM_HANDLE_NUM_INTS (						\
 	((sizeof(struct gralloc_drm_handle_t) - sizeof(native_handle_t))/sizeof(int))	\
 	 - GRALLOC_DRM_HANDLE_NUM_FDS)

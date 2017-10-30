@@ -81,6 +81,30 @@ static int drm_mod_perform(const struct gralloc_module_t *mod, int op, ...)
 			err = 0;
 		}
 		break;
+#ifdef USE_HWC2
+	case static_cast<int>(GRALLOC_MODULE_PERFORM_GET_RK_ASHMEM):
+		{
+			buffer_handle_t hnd = va_arg(args, buffer_handle_t);
+			struct rk_ashmem_t* rk_ashmem = va_arg(args, struct rk_ashmem_t*);
+
+			if (rk_ashmem != NULL)
+				err = gralloc_drm_handle_get_rk_ashmem(hnd,rk_ashmem);
+			else
+				err = -EINVAL;
+		}
+		break;
+	case static_cast<int>(GRALLOC_MODULE_PERFORM_SET_RK_ASHMEM):
+		{
+			buffer_handle_t hnd = va_arg(args, buffer_handle_t);
+			struct rk_ashmem_t* rk_ashmem = va_arg(args, struct rk_ashmem_t*);
+
+			if (rk_ashmem != NULL)
+				err = gralloc_drm_handle_set_rk_ashmem(hnd,rk_ashmem);
+			else
+				err = -EINVAL;
+		}
+		break;
+#endif
 	case GRALLOC_MODULE_PERFORM_GET_HADNLE_PHY_ADDR:
 		{
 			buffer_handle_t hnd = va_arg(args, buffer_handle_t);

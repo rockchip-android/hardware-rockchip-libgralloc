@@ -1457,6 +1457,33 @@ static struct gralloc_drm_bo_t *drm_gem_rockchip_alloc(
                                 goto err_unref;
                         }
                 }
+		}
+#endif
+#ifdef USE_HWC2
+	/*
+	 * If handle has been dup,then the fd is a negative number.
+	 * Either you should close it or don't allocate the fd agagin.
+	 * Otherwize,it will leak fd.
+	 */
+	if(handle->ashmem_fd < 0)
+	{
+			err = gralloc_rk_ashmem_allocate( handle );
+			//ALOGD("err=%d,isfb=%x,[%d,%x]",err,usage & GRALLOC_USAGE_HW_FB,hnd->share_attr_fd,hnd->attr_base);
+			if( err < 0 )
+			{
+					if ( (usage & GRALLOC_USAGE_HW_FB) )
+					{
+							/*
+							 * Having the attribute region is not critical for the framebuffer so let it pass.
+							 */
+							err = 0;
+					}
+					else
+					{
+							drm_gem_rockchip_free( drv, &buf->base );
+							goto err_unref;
+					}
+			}
 	}
 #endif
 
@@ -1529,6 +1556,9 @@ static void drm_gem_rockchip_free(struct gralloc_drm_drv_t *drv,
 	gralloc_buffer_attr_free( gr_handle );
 #endif
 
+#ifdef USE_HWC2
+	gralloc_rk_ashmem_free( gr_handle );
+#endif
 	if (gr_handle->prime_fd)
 		close(gr_handle->prime_fd);
 

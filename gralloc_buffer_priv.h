@@ -79,6 +79,146 @@ int gralloc_buffer_attr_allocate( struct gralloc_drm_handle_t *hnd );
  */
 int gralloc_buffer_attr_free( struct gralloc_drm_handle_t *hnd );
 
+#ifdef USE_HWC2
+/*
+ * Allocate shared memory for rk ashmem. Only to be
+ * used by gralloc internally.
+ *
+ * Return 0 on success.
+ */
+int gralloc_rk_ashmem_allocate( struct gralloc_drm_handle_t *hnd );
+
+/*
+ * Frees the shared memory allocated for rk ashmem.
+ * Only to be used by gralloc internally.
+
+ * Return 0 on success.
+ */
+int gralloc_rk_ashmem_free( struct gralloc_drm_handle_t *hnd );
+
+/*
+ * Map the rk_ashmem area before attempting to
+ * read/write from it.
+ *
+ * Return 0 on success.
+ */
+static inline int gralloc_rk_ashmem_map( struct gralloc_drm_handle_t *hnd, int readwrite)
+{
+	int rval = -1;
+	int prot_flags = PROT_READ;
+
+	if( !hnd )
+		goto out;
+
+	if( hnd->ashmem_fd < 0 )
+	{
+		ALOGE("Shared attribute region not available to be mapped");
+		goto out;
+	}
+
+	if( readwrite )
+	{
+		prot_flags |=  PROT_WRITE;
+	}
+
+	hnd->ashmem_base = mmap( NULL, PAGE_SIZE, prot_flags, MAP_SHARED, hnd->ashmem_fd, 0 );
+	if(hnd->ashmem_base == MAP_FAILED)
+	{
+		ALOGE("Failed to mmap shared attribute region err=%s",strerror(errno));
+		goto out;
+	}
+
+	rval = 0;
+
+out:
+	return rval;
+}
+
+/*
+ * Unmap the rk_ashmem area when done with it.
+ *
+ * Return 0 on success.
+ */
+static inline int gralloc_rk_ashmem_unmap( struct gralloc_drm_handle_t *hnd )
+{
+	int rval = -1;
+
+	if( !hnd )
+	{
+		ALOGE("%s:handle is null",__FUNCTION__);
+		goto out;
+	}
+
+	if( hnd->ashmem_base != MAP_FAILED )
+	{
+		if ( munmap( hnd->ashmem_base, PAGE_SIZE ) == 0 )
+		{
+			hnd->ashmem_base = MAP_FAILED;
+			rval = 0;
+		}
+	}
+
+out:
+	return rval;
+}
+
+/*
+#define LayerNameLength		100
+typedef struct rk_ashmem_t
+{
+    int32_t alreadyStereo;
+    int32_t displayStereo;
+    char LayerName[LayerNameLength + 1];
+} rk_ashmem_t;
+*/
+/*
+ * Read or write rk_ashmem from/to the storage area.
+ *
+ * Return 0 on success.
+ */
+static inline int gralloc_rk_ashmem_write( struct gralloc_drm_handle_t *hnd, struct rk_ashmem_t *val )
+{
+	int rval = -1;
+
+	if( !hnd || !val)
+	{
+		ALOGE("%s:parameters is null",__FUNCTION__);
+		goto out;
+	}
+
+	if( hnd->ashmem_base != MAP_FAILED )
+	{
+		memcpy(hnd->ashmem_base, val, sizeof(struct rk_ashmem_t));
+//		ALOGD("gralloc_rk_ashmem_write LayerName=%s,alreadyStereo=%d,displayStereo=%d",val->LayerName,val->alreadyStereo,val->displayStereo);
+		rval = 0;
+	}
+
+out:
+	return rval;
+}
+
+static inline int gralloc_rk_ashmem_read( struct gralloc_drm_handle_t *hnd, struct rk_ashmem_t *val )
+{
+	int rval = -1;
+
+	if( !hnd || !val )
+	{
+		ALOGE("%s:parameters is null",__FUNCTION__);
+		goto out;
+	}
+
+	if( hnd->ashmem_base != MAP_FAILED )
+	{
+		memcpy(val, hnd->ashmem_base, sizeof(struct rk_ashmem_t));
+		//ALOGD("gralloc_rk_ashmem_read LayerName=%s,alreadyStereo=%d,displayStereo=%d",val->LayerName,val->alreadyStereo,val->displayStereo);
+		rval = 0;
+	}
+
+out:
+	return rval;
+}
+#endif
+
 /*
  * Map the attribute storage area before attempting to
  * read/write from it.
