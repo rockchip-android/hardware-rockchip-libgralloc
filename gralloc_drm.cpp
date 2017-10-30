@@ -373,6 +373,14 @@ struct gralloc_drm_bo_t *gralloc_drm_bo_from_handle(buffer_handle_t handle)
 	if (bo)
 		bo->refcount++;
 	pthread_mutex_unlock(&bo_mutex);
+
+    //If handle is modified,then we need update bo->handle.
+    if(bo->imported==1 && (unsigned long)bo->handle != (unsigned long)handle)
+    {
+        ALOGD_IF(RK_DRM_GRALLOC_DEBUG, "%s: update bo->handle=%p ==> handle=%p",__FUNCTION__,bo->handle,handle);
+        bo->handle = (struct gralloc_drm_handle_t *)handle;
+    }
+
 	return bo;
 }
 
