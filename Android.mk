@@ -97,7 +97,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libdrm \
 	liblog \
 	libcutils \
-	libhardware_legacy \
 	libutils
 
 ifneq ($(filter $(intel_drivers), $(DRM_GPU_DRIVERS)),)
